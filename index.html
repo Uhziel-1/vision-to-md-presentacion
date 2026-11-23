@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vision-to-MD — Presentación Empírica</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="top-progress"><div id="progressFill" class="top-progress-fill"></div></div>
+
+  <main class="deck">
+
+    <!-- 01 · PORTADA -->
+    <section class="slide slide-title" data-group="0" data-color="#1e293b" data-kind="title" data-title="Portada — Vision-to-MD" style="--slide-color:#1e293b">
+      <div class="title-pill anim d1">Inteligencia Artificial · Estudio Empírico</div>
+      <h1 class="anim d2">Vision-to-MD: Reconstrucción Estructural de Documentos Científicos a Markdown</h1>
+      <p class="title-sub anim d3">
+        Detección visoespacial local con YOLOv8, ordenamiento geométrico y lectura híbrida de alta fidelidad sin consumo de APIs externas.
+      </p>
+      <div class="cover-meta anim d4">
+        <span><strong>Autor:</strong> Uhziel Elí Condori Rojas</span>
+        <span><strong>Institución:</strong> E.P. Ingeniería de Sistemas — UPeU</span>
+        <span><strong>Fecha:</strong> Noviembre 2026</span>
+      </div>
+    </section>
+
+    <!-- ==================== SECCIÓN 1: INTRODUCCIÓN ==================== -->
+    <section class="slide slide-title" data-group="1" data-color="#2563eb" data-kind="title" data-title="01 · Introducción" style="--slide-color:#2563eb">
+      <div class="title-pill anim d1">Sección 01</div>
+      <h1 class="anim d2">Introducción</h1>
+      <p class="title-sub anim d3">Motivación práctica, limitaciones de la lectura lineal en PDF y formulación empírica del problema.</p>
+      <span class="section-num-bg">01</span>
+    </section>
+
+    <section class="slide" data-group="1" data-color="#2563eb" data-kind="content" data-title="1.1 Contexto y Motivación" style="--slide-color:#2563eb">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">01 · Introducción</div>
+        <h2>1.1 Contexto y Motivación</h2>
+        <p class="header-summary">Por qué transformar PDFs complejos en Markdown local mejora la confiabilidad y reduce consumo de tokens.</p>
+      </header>
+      <div class="full-body">
+        <div class="card-grid-3 anim d2">
+          <div class="card accent-left">
+            <h3>📄 Problema del PDF Lineal</h3>
+            <p>Los extractores tradicionales leen de izquierda a derecha sin distinguir columnas, mezclando párrafos y destruyendo tablas o diagramas.</p>
+          </div>
+          <div class="card accent-left">
+            <h3>💸 Costo de Modelos en Nube</h3>
+            <p>Pasar páginas completas como imagen a modelos multimodales externos consume miles de tokens y genera dependencia de APIs.</p>
+          </div>
+          <div class="card accent-left">
+            <h3>⚡ Solución Local: Vision-to-MD</h3>
+            <p>YOLOv8 segmenta y ordena en GPU local, recorta figuras/tablas en PNG y entrega un <code>.md</code> compacto y limpio para cualquier flujo posterior.</p>
+          </div>
+        </div>
+        <div class="card anim d3">
+          <h3>Impacto Directo en Flujo Documental</h3>
+          <div class="bar-chart" style="margin-top:10px">
+            <div class="bar-row">
+              <span class="bar-lbl">PyMuPDF4LLM (.md)</span>
+              <div class="bar-track"><div class="bar-fill" style="--w:100%; --bar-c:#94a3b8"></div></div>
+              <span class="bar-num">492 tok</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-lbl">PyMuPDF Crudo</span>
+              <div class="bar-track"><div class="bar-fill" style="--w:87%; --bar-c:#cbd5e1"></div></div>
+              <span class="bar-num">430 tok</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-lbl">Vision-to-MD (Limpio)</span>
+              <div class="bar-track"><div class="bar-fill" style="--w:71%; --bar-c:#2563eb"></div></div>
+              <span class="bar-num">349 tok (-29%)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-group="1" data-color="#2563eb" data-kind="content" data-title="1.2 Problema y Preguntas Empíricas" style="--slide-color:#2563eb">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">01 · Introducción</div>
+        <h2>1.2 Formulación del Problema y Preguntas Empíricas</h2>
+        <p class="header-summary">Separación supervisada entre comprensión espacial de 11 clases y transcripción textual localizada.</p>
+      </header>
+      <div class="full-body">
+        <div class="card anim d2">
+          <h3>Enfoque de Aprendizaje Supervisado</h3>
+          <p>En lugar de depender de heurísticas frágiles sobre coordenadas PDF, el sistema clasifica visualmente cada página rasterizada en <strong>11 categorías estructurales</strong> (<em>Title, Section-header, Text, List-item, Table, Picture, Formula, Caption, Footnote, Page-header, Page-footer</em>).</p>
+        </div>
+        <div class="card-grid-2 anim d3">
+          <div class="card accent-left">
+            <h3>🔬 PE1 · Ablación Datos vs. Modelo</h3>
+            <p>¿En qué medida influyen el balanceo estratificado (<em>oversampling</em>) y el escalamiento de diversidad documental frente al tamaño de red en la precisión por clase?</p>
+          </div>
+          <div class="card accent-left">
+            <h3>⚖️ PE2 · Confiabilidad y Latencia</h3>
+            <p>¿Qué fidelidad textual, orden en doble columna y velocidad logra el <em>pipeline</em> en modo visual e híbrido frente a extractores locales alternativos?</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECCIÓN 2: METODOLOGÍA ==================== -->
+    <section class="slide slide-title" data-group="2" data-color="#7c3aed" data-kind="title" data-title="02 · Metodología" style="--slide-color:#7c3aed">
+      <div class="title-pill anim d1">Sección 02</div>
+      <h1 class="anim d2">Metodología y Diseño Experimental</h1>
+      <p class="title-sub anim d3">Arquitectura modular de cinco capas, auditoría sin fuga de datos, regularización y protocolo de evaluación.</p>
+      <span class="section-num-bg">02</span>
+    </section>
+
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="2.1 Arquitectura de 5 Capas" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">02 · Metodología</div>
+        <h2>2.1 Arquitectura Modular del Sistema</h2>
+        <p class="header-summary">Pipeline desacoplado sobre PyTorch CUDA con selector de lector Visual (OCR) o Híbrido (vectorial por caja).</p>
+      </header>
+      <div class="full-body">
+        <div class="flow-strip anim d2">
+          <div class="flow-node">
+            <span class="flow-step">Capa 1</span>
+            <h4>Adapters</h4>
+            <p>Renderiza PDF a 200 DPI con PyMuPDF e indexa palabras vectoriales.</p>
+          </div>
+          <div class="flow-node">
+            <span class="flow-step">Capa 2</span>
+            <h4>Vision (YOLO)</h4>
+            <p>YOLOv8 a 1024px en RTX 4060 detecta las 11 clases estructurales.</p>
+          </div>
+          <div class="flow-node">
+            <span class="flow-step">Capa 3</span>
+            <h4>Layout</h4>
+            <p>Supresión por contención y orden XY-Cut de 1 o 2 columnas.</p>
+          </div>
+          <div class="flow-node">
+            <span class="flow-step">Capa 4</span>
+            <h4>Lector Híbrido</h4>
+            <p>PyMuPDF por <code>bbox</code> en PDF digital o PaddleOCR en escaneos.</p>
+          </div>
+          <div class="flow-node">
+            <span class="flow-step">Capa 5</span>
+            <h4>Exporters</h4>
+            <p>Recorta figuras/tablas PNG y genera el archivo <code>.md</code> jerárquico.</p>
+          </div>
+        </div>
+        <div class="card-grid-2 anim d3">
+          <div class="card">
+            <h3>👁️ Modo Visual (<code>PaddleOCR</code>)</h3>
+            <p>Universal para capturas, fotos y PDFs escaneados; transcribe desde píxeles con margen de seguridad.</p>
+          </div>
+          <div class="card">
+            <h3>⚡ Modo Híbrido (<code>auto</code>)</h3>
+            <p>Usa el <strong>mismo detector YOLO</strong>, pero lee palabras nativas dentro de cada caja en milisegundos sin errores OCR.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="2.2 Datos, EDA y Zero-Leakage" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">02 · Metodología</div>
+        <h2>2.2 Adquisición, Limpieza y Auditoría de Datos</h2>
+        <p class="header-summary">Deduplicación por id_box, diagnóstico de desbalance extremo y partición estricta Train / Valid / Test.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2" data-images='[{"src":"figuras/fig_audit_01.png","caption":"Verificación visual de anotaciones deduplicadas en DocLayNet"}]'>
+          <div class="media-stage"><img alt="Auditoría" /><span class="zoom-hint">Clic para ampliar</span></div>
+          <div class="media-bar">
+            <span class="media-caption"></span>
+            <div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div>
+          </div>
+        </div>
+        <div class="text-panel anim d3">
+          <ul class="bullet-list">
+            <li><strong>Deduplicación por <code>id_box</code>:</strong> los JSON originales repetían la caja padre por cada línea; se redujeron a bloques únicos.</li>
+            <li><strong>Desbalance severo detectado:</strong> en <em>DocLayNet-small</em> (691 págs), <code>Text</code> tenía 4,293 cajas frente a 59 <code>Title</code> (<strong>73:1</strong>) y 30 <code>Footnote</code> (<strong>143:1</strong>).</li>
+            <li><strong>Zero Data Leakage:</strong> se cruzaron los 113 identificadores de evaluación de <em>small</em> contra el entrenamiento de <em>base</em> (6,910 págs), confirmando <strong>0 coincidencias</strong>.</li>
+          </ul>
+          <table class="clean-table">
+            <thead><tr><th>Corpus</th><th>Train</th><th>Valid</th><th>Test</th><th>Total Cajas</th></tr></thead>
+            <tbody>
+              <tr><td>DocLayNet-small</td><td>691</td><td>64</td><td>49</td><td>10,595</td></tr>
+              <tr class="hl"><td>DocLayNet-base</td><td>6,910</td><td>648</td><td>499</td><td>107,282</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="2.3 Regularización y Ablación" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">02 · Metodología</div>
+        <h2>2.3 Entrenamiento, Regularización y Ablación Controlada</h2>
+        <p class="header-summary">Aislamiento progresivo de variables: baseline ligero (R-01), balanceo estratificado (R-02) y escala 10x (R-03).</p>
+      </header>
+      <div class="full-body">
+        <div class="card-grid-3 anim d2">
+          <div class="card">
+            <h3>R-01 · Baseline</h3>
+            <p><strong>Red:</strong> <code>yolov8s</code> (11.1M)<br><strong>Datos:</strong> 691 págs sin balanceo<br><strong>Config:</strong> 50 ép, Early Stop p=12, L2=5e-4, AdamW.</p>
+          </div>
+          <div class="card accent-left">
+            <h3>R-02 · Data-Centric</h3>
+            <p><strong>Red:</strong> <code>yolov8m</code> (25.8M)<br><strong>Datos:</strong> 1,212 entradas (4x Title/Footnote solo en train)<br><strong>Config:</strong> 75 ép, p=15, L2=8e-4, close_mosaic=15.</p>
+          </div>
+          <div class="card accent-left" style="border-left-color:#059669">
+            <h3>R-03 · Escala + Balance</h3>
+            <p><strong>Red:</strong> <code>yolov8m</code> (25.8M)<br><strong>Datos:</strong> 7,780 entradas (6,910 únicas + 3x Title/Footnote)<br><strong>Config:</strong> 35 ép (~243 pasos/ép), p=8, close_mosaic=8.</p>
+          </div>
+        </div>
+        <div class="card anim d3">
+          <h3>Controles Anti-Overfitting Aplicados</h3>
+          <ul class="bullet-list" style="margin-top:8px">
+            <li><strong>Data Augmentation documental:</strong> traslación, escala y HSV moderados; <code>fliplr=0.0</code> y <code>flipud=0.0</code> para no invertir lectura ni columnas.</li>
+            <li><strong>Optimizador y parada temprana:</strong> <code>AdamW</code> con programación coseno (<code>cos_lr</code>), regularización L2 y restauración automática de <code>best.pt</code>.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="2.4 Post-Procesamiento Geométrico" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">02 · Metodología</div>
+        <h2>2.4 Post-Procesamiento Geométrico y Reconstrucción Markdown</h2>
+        <p class="header-summary">Reglas espaciales deterministas para eliminar duplicados, ordenar columnas y conservar jerarquía.</p>
+      </header>
+      <div class="full-body">
+        <div class="card-grid-2 anim d2">
+          <div class="card accent-left">
+            <h3>1. Filtro de Contención (≥ 70%)</h3>
+            <p>Junto a <code>agnostic_nms=True</code>, suprime subcajas contenidas dentro de un bloque contenedor mayor, evitando repetir texto dentro de listas o tablas.</p>
+          </div>
+          <div class="card accent-left">
+            <h3>2. Corte XY-Cut por Bandas</h3>
+            <p>Detecta separadores de ancho completo (títulos, resúmenes) y ordena cada banda intermedia de columna izquierda a columna derecha.</p>
+          </div>
+          <div class="card accent-left">
+            <h3>3. Agrupación por Renglón y Padding</h3>
+            <p>Aplica margen de seguridad (±14 px) en OCR y ordena palabras vectoriales por renglón visual (&gt;14 px) uniendo guiones de salto de línea.</p>
+          </div>
+          <div class="card accent-left">
+            <h3>4. Jerarquía Automática Markdown</h3>
+            <p>Mapea numeración explícita (<code>1.</code> → <code>##</code>, <code>1.1</code> → <code>###</code>, <code>1.1.1</code> → <code>####</code>) y preserva listas numeradas limpias.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="2.5 Protocolo de Evaluación" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">02 · Metodología</div>
+        <h2>2.5 Protocolo de Evaluación y Métricas</h2>
+        <p class="header-summary">Evaluación cuantitativa de detección espacial y benchmark local de fidelidad documental.</p>
+      </header>
+      <div class="full-body">
+        <div class="card-grid-2 anim d2">
+          <div class="card">
+            <h3>📐 Métricas de Detección (YOLO)</h3>
+            <ul class="bullet-list" style="margin-top:8px">
+              <li><strong>Precision (P) y Recall (R):</strong> equilibrio entre falsos positivos y bloques omitidos.</li>
+              <li><strong>mAP@50 y mAP@50-95:</strong> precisión media bajo IoU 0.50 y rigor multi-umbral.</li>
+              <li><strong>Matriz de Confusión Normalizada:</strong> análisis de errores cruzados entre clases.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>📑 Benchmark de Confiabilidad (.md)</h3>
+            <ul class="bullet-list" style="margin-top:8px">
+              <li><strong>Sintético (Ground Truth):</strong> <em>Word F1</em>, <em>Recall</em>, latencia y tamaño en tokens aprox.</li>
+              <li><strong>Paper Real 2 Columnas:</strong> cobertura de 13 anclas, orden por pares, términos técnicos, guiones rotos y ruido filtrado.</li>
+              <li><strong>Ejecución 100% Local:</strong> contraste frente a <code>PyMuPDF</code>, <code>PyMuPDF4LLM</code> y <code>Marker</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECCIÓN 3: RESULTADOS ==================== -->
+    <section class="slide slide-title" data-group="3" data-color="#059669" data-kind="title" data-title="03 · Resultados" style="--slide-color:#059669">
+      <div class="title-pill anim d1">Sección 03</div>
+      <h1 class="anim d2">Resultados Empíricos</h1>
+      <p class="title-sub anim d3">Convergencia de entrenamiento, triple ablación cuantitativa y benchmark frente a extractores alternativos.</p>
+      <span class="section-num-bg">03</span>
+    </section>
+
+    <section class="slide" data-group="3" data-color="#059669" data-kind="content" data-title="3.1 Convergencia y Early Stopping" style="--slide-color:#059669">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">03 · Resultados</div>
+        <h2>3.1 Convergencia del Entrenamiento y Control del Overfitting</h2>
+        <p class="header-summary">Comparativa de curvas en validación y efecto de Early Stopping y close_mosaic sin sobreajuste.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2" data-images='[{"src":"figuras/fig_triple_curvas.png","caption":"Evolución comparada de mAP@50 y mAP@50-95 en validación (R-01 vs. R-02 vs. R-03)"},{"src":"figuras/fig_r03_curvas.png","caption":"Curvas completas de pérdidas y métricas de R-03 (caída limpia en época 28 por close_mosaic=8)"}]'>
+          <div class="media-stage"><img alt="Curvas" /><span class="zoom-hint">Clic para ampliar</span></div>
+          <div class="media-bar">
+            <span class="media-caption"></span>
+            <div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div>
+          </div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="kpi-row">
+            <div class="kpi"><div class="val">Ép. 49</div><div class="lbl">Óptimo R-02 (paró en 64)</div></div>
+            <div class="kpi"><div class="val">Ép. 4</div><div class="lbl">R-03 supera a R-02</div></div>
+            <div class="kpi"><div class="val">0.547</div><div class="lbl">val/cls_loss final R-03</div></div>
+          </div>
+          <ul class="bullet-list">
+            <li><strong>Early Stopping validado en R-02:</strong> detuvo el entrenamiento en la época 64 tras 15 épocas sin superar la época 49, evitando memorizar 691 páginas repetidas.</li>
+            <li><strong>Escalamiento en R-03:</strong> al realizar ~243 pasos/época sobre 6,910 páginas únicas, alcanzó <code>0.715</code> en la época 4 y su máximo estable en la <strong>época 35</strong> tras <code>close_mosaic=8</code>.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-group="3" data-color="#059669" data-kind="content" data-title="3.2 Ablación Cuantitativa Global" style="--slide-color:#059669">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">03 · Resultados</div>
+        <h2>3.2 Ablación Cuantitativa Global (R-01 vs. R-02 vs. R-03)</h2>
+        <p class="header-summary">Evaluación comparativa sobre los tres conjuntos independientes libres de fuga de datos.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2" data-images='[{"src":"figuras/fig_triple_global.png","caption":"Comparativa global Precision, Recall, mAP@50 y mAP@50-95 en evaluación común"}]'>
+          <div class="media-stage"><img alt="Global" /><span class="zoom-hint">Clic para ampliar</span></div>
+          <div class="media-bar">
+            <span class="media-caption"></span>
+            <div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div>
+          </div>
+        </div>
+        <div class="text-panel anim d3">
+          <table class="clean-table">
+            <thead><tr><th>Benchmark</th><th>Run</th><th>R</th><th>mAP@50</th><th>mAP@50-95</th></tr></thead>
+            <tbody>
+              <tr><td>Small Test (49)</td><td>R-01</td><td>0.642</td><td>0.701</td><td>0.534</td></tr>
+              <tr><td>Small Test (49)</td><td>R-02</td><td>0.673</td><td>0.722</td><td>0.558</td></tr>
+              <tr class="hl"><td>Small Test (49)</td><td>R-03</td><td>0.801</td><td>0.822</td><td>0.676</td></tr>
+              <tr><td>Base Test (499)</td><td>R-01</td><td>0.633</td><td>0.655</td><td>0.467</td></tr>
+              <tr><td>Base Test (499)</td><td>R-02</td><td>0.635</td><td>0.686</td><td>0.500</td></tr>
+              <tr class="hl"><td>Base Test (499)</td><td>R-03</td><td>0.804</td><td>0.854</td><td>0.686</td></tr>
+            </tbody>
+          </table>
+          <p style="font-size:0.88rem; color:var(--muted)"><strong>R-03</strong> eleva +19.9 pts el <code>mAP@50</code> y +21.8 pts el <code>mAP@50-95</code> sobre R-01 en el test grande (499 págs, 36.9 ms/img en GPU).</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-group="3" data-color="#059669" data-kind="content" data-title="3.3 Desempeño por Clase y Matriz" style="--slide-color:#059669">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">03 · Resultados</div>
+        <h2>3.3 Desempeño por Clase y Matriz de Confusión</h2>
+        <p class="header-summary">R-03 mejora las 11 categorías simultáneamente y rescata las clases minoritarias.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2" data-images='[{"src":"figuras/fig_triple_base_clases.png","caption":"mAP@50 por clase en DocLayNet-base Test (499 páginas): R-01 vs. R-02 vs. R-03"},{"src":"figuras/fig_r03_cm.png","caption":"Matriz de confusión normalizada de R-03 en Base Test (diagonales entre 0.81 y 0.97)"}]'>
+          <div class="media-stage"><img alt="Clases" /><span class="zoom-hint">Clic para ampliar</span></div>
+          <div class="media-bar">
+            <span class="media-caption"></span>
+            <div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div>
+          </div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="kpi-row">
+            <div class="kpi"><div class="val">0.88</div><div class="lbl">Footnote (antes 0.18)</div></div>
+            <div class="kpi"><div class="val">0.91</div><div class="lbl">Table &amp; List-item</div></div>
+            <div class="kpi"><div class="val">0.77</div><div class="lbl">Title (antes 0.59)</div></div>
+          </div>
+          <ul class="bullet-list">
+            <li><strong>Salto universal:</strong> todas las clases subieron en <em>Base Test</em> (<code>Picture</code> 0.42 → 0.71, <code>Formula</code> 0.68 → 0.90, <code>Text</code> 0.85 → 0.94).</li>
+            <li><strong>Matriz de Confusión R-03:</strong> diagonales de <code>0.81</code> (<em>Title</em>) a <code>0.97</code> (<em>Formula</em>); la principal confusión residual es 10% entre <em>Title/Page-header</em> y <em>Section-header</em>.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-group="3" data-color="#059669" data-kind="content" data-title="3.4 Benchmark Documento Sintético" style="--slide-color:#059669">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">03 · Resultados</div>
+        <h2>3.4 Benchmark Local: Documento Sintético (Ground Truth)</h2>
+        <p class="header-summary">Comparativa de fidelidad textual, latencia y compacidad del Markdown generado.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2" data-images='[{"src":"figuras/fig_bench_sint.png","caption":"Word F1 frente a latencia total en documento sintético controlado (2 páginas)"}]'>
+          <div class="media-stage"><img alt="Benchmark Sintético" /><span class="zoom-hint">Clic para ampliar</span></div>
+          <div class="media-bar">
+            <span class="media-caption"></span>
+            <div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div>
+          </div>
+        </div>
+        <div class="text-panel anim d3">
+          <table class="clean-table">
+            <thead><tr><th>Extractor</th><th>Word F1</th><th>Recall</th><th>Tiempo</th><th>Tokens</th></tr></thead>
+            <tbody>
+              <tr><td>PyMuPDF crudo</td><td>0.793</td><td>0.994</td><td>0.03s</td><td>430</td></tr>
+              <tr><td>PyMuPDF4LLM</td><td>0.866</td><td>0.994</td><td>2.09s</td><td>492</td></tr>
+              <tr><td>Vision-to-MD Visual</td><td>0.985</td><td>0.988</td><td>70.31s</td><td>349</td></tr>
+              <tr class="hl"><td>Vision-to-MD Híbrido</td><td>0.994</td><td>1.000</td><td>2.00s</td><td>349</td></tr>
+            </tbody>
+          </table>
+          <ul class="bullet-list">
+            <li><strong>Máxima fidelidad (0.994 F1):</strong> recupera el 100% de las palabras válidas sin arrastrar encabezados ni pies institucionales.</li>
+            <li><strong>35x más rápido que OCR puro</strong> en CPU manteniendo exactamente las mismas detecciones espaciales de YOLO R-03.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-group="3" data-color="#059669" data-kind="content" data-title="3.5 Benchmark Paper Real 2 Columnas" style="--slide-color:#059669">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">03 · Resultados</div>
+        <h2>3.5 Benchmark Local: Artículo Científico Real (2 Columnas)</h2>
+        <p class="header-summary">Evaluación sobre P02_ART-010_Tan_2024.pdf comparando orden, cobertura y limpieza.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2" data-images='[{"src":"figuras/fig_bench_paper.png","caption":"Cobertura de anclas, orden en doble columna e incidencias de limpieza en artículo real"}]'>
+          <div class="media-stage"><img alt="Benchmark Paper" /><span class="zoom-hint">Clic para ampliar</span></div>
+          <div class="media-bar">
+            <span class="media-caption"></span>
+            <div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div>
+          </div>
+        </div>
+        <div class="text-panel anim d3">
+          <table class="clean-table">
+            <thead><tr><th>Extractor</th><th>Anclas</th><th>Orden</th><th>Guiones</th><th>Tiempo</th></tr></thead>
+            <tbody>
+              <tr><td>PyMuPDF crudo</td><td>13/13</td><td>1.000</td><td>18</td><td>0.04s</td></tr>
+              <tr><td>PyMuPDF4LLM</td><td>10/13</td><td>1.000</td><td>0</td><td>1.27s</td></tr>
+              <tr><td>Marker (ref. previa)</td><td>10/13</td><td>1.000</td><td>0</td><td>req. Docker</td></tr>
+              <tr><td>Vision-to-MD Visual</td><td>12/13</td><td>1.000</td><td>0</td><td>157.25s</td></tr>
+              <tr class="hl"><td>Vision-to-MD Híbrido</td><td>12/13</td><td>1.000</td><td>0</td><td>0.39s</td></tr>
+            </tbody>
+          </table>
+          <p style="font-size:0.9rem; color:var(--muted)">El modo híbrido logra <strong>100% orden 2-columnas</strong>, <code>6/6</code> términos técnicos intactos y <code>0</code> guiones rotos en <strong>0.39 s</strong> sin requerir contenedores Docker.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECCIÓN 4: ANÁLISIS Y DISCUSIÓN ==================== -->
+    <section class="slide slide-title" data-group="4" data-color="#d97706" data-kind="title" data-title="04 · Análisis y Discusión" style="--slide-color:#d97706">
+      <div class="title-pill anim d1">Sección 04</div>
+      <h1 class="anim d2">Análisis Crítico de Errores y Discusión</h1>
+      <p class="title-sub anim d3">Inspección cualitativa antes/después, causas raíz de fallas residuales y amenazas a la validez.</p>
+      <span class="section-num-bg">04</span>
+    </section>
+
+    <section class="slide" data-group="4" data-color="#d97706" data-kind="content" data-title="4.1 Evolución Cualitativa Visual" style="--slide-color:#d97706">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">04 · Análisis y Discusión</div>
+        <h2>4.1 Evolución Cualitativa (Antes vs. Después)</h2>
+        <p class="header-summary">Inspección caja por caja de los errores resueltos al escalar a R-03 y aplicar filtro geométrico.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2" data-images='[{"src":"figuras/fig_sint_r02_p2.png","caption":"Sintético Pág. 2 en R-02: omite tabla huérfana de una sola fila"},{"src":"figuras/fig_sint_r03_p2.png","caption":"Sintético Pág. 2 en R-03: rescata la tabla huérfana (Table 64%)"},{"src":"figuras/fig_paper_r03_p1.png","caption":"Paper Real Pág. 1 (R-03): metadatos legales reclasificados como Footnote"},{"src":"figuras/fig_paper_r03_p2.png","caption":"Paper Real Pág. 2 (R-03): lectura limpia a 2 columnas sin headers falsos"}]'>
+          <div class="media-stage"><img alt="Diagnóstico visual" /><span class="zoom-hint">Clic para ampliar</span></div>
+          <div class="media-bar">
+            <span class="media-caption"></span>
+            <div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div>
+          </div>
+        </div>
+        <div class="text-panel anim d3">
+          <ul class="bullet-list">
+            <li><strong>Cero duplicados:</strong> el filtro de contención redujo bloques redundantes (<code>19→14</code> en pág. 1 del paper real) y <code>XY-Cut</code> corrigió la secuencia.</li>
+            <li><strong>Rescate de casos límite en R-03:</strong> recuperó encabezados azules estilizados (81–87%) y la <strong>tabla huérfana de 1 fila</strong> en pág. 2 (antes omitida por R-01 y R-02).</li>
+            <li><strong>Limpieza semántica:</strong> DOI, fechas y licencia pasaron de ser falsos <code>Section-header</code> (<code>##</code>) a <code>Footnote</code> (50–82%).</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-group="4" data-color="#d97706" data-kind="content" data-title="4.2 Limitaciones Persistentes" style="--slide-color:#d97706">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">04 · Análisis y Discusión</div>
+        <h2>4.2 Limitaciones Persistentes Identificadas</h2>
+        <p class="header-summary">Cuatro patrones de error observados tras la inspección visual detallada sobre R-03.</p>
+      </header>
+      <div class="full-body">
+        <div class="card-grid-2 anim d2">
+          <div class="card accent-left">
+            <h3>1. Cabecera Editorial vs. Título</h3>
+            <p>Etiquetó la revista (<em>Information and Software Technology</em>) como <code>Title</code> (66%) y el título del paper como <code>Section-header</code> (48%); falta la clase <code>Author</code> en el esquema.</p>
+          </div>
+          <div class="card accent-left">
+            <h3>2. Abstract en Recuadro Compuesto</h3>
+            <p>El bloque <code>ARTICLE INFO | ABSTRACT</code> fue clasificado como <code>Table</code> (58%), exportándolo como imagen PNG y dejando el resumen fuera del texto plano.</p>
+          </div>
+          <div class="card accent-left">
+            <h3>3. Subtítulos Pegados sin Espacio</h3>
+            <p>La subsección <code>2.1. Software clustering...</code> en cursiva de igual tamaño y sin salto vertical quedó fusionada dentro de un bloque <code>Text</code> (94%).</p>
+          </div>
+          <div class="card accent-left">
+            <h3>4. Latencia OCR en Escaneos</h3>
+            <p>Aunque YOLO tarda ~39 ms/pág en GPU, documentos escaneados sin texto vectorial siguen dependiendo de PaddleOCR en CPU (~35–78 s/pág).</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-group="4" data-color="#d97706" data-kind="content" data-title="4.3 Amenazas a la Validez" style="--slide-color:#d97706">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">04 · Análisis y Discusión</div>
+        <h2>4.3 Amenazas a la Validez</h2>
+        <p class="header-summary">Consideraciones metodológicas sobre repetibilidad estocástica y alcance de generalización.</p>
+      </header>
+      <div class="full-body">
+        <div class="card-grid-2 anim d2">
+          <div class="card accent-left">
+            <h3>🔒 Validez Interna</h3>
+            <ul class="bullet-list" style="margin-top:8px">
+              <li>Entrenar <code>YOLOv8m</code> sobre <em>DocLayNet-base</em> superó las 8 horas en GPU portátil.</li>
+              <li>Por restricción de cómputo se empleó una única semilla determinista (<code>seed=0</code>) en lugar de validación cruzada <em>K-Fold</em> completa.</li>
+              <li>Se garantizó rigor en las métricas manteniendo 0 solapamiento entre particiones.</li>
+            </ul>
+          </div>
+          <div class="card accent-left">
+            <h3>🌐 Validez Externa</h3>
+            <ul class="bullet-list" style="margin-top:8px">
+              <li>El <em>benchmark</em> extremo-a-extremo se concentró en dos documentos tipo (sintético moderno en español y artículo Elsevier en inglés).</li>
+              <li>Dominios como formularios manuscritos, ecuaciones en bloque extensas o tablas multipágina requieren validación adicional.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECCIÓN 5: CONCLUSIONES ==================== -->
+    <section class="slide slide-title" data-group="5" data-color="#0891b2" data-kind="title" data-title="05 · Conclusiones" style="--slide-color:#0891b2">
+      <div class="title-pill anim d1">Sección 05</div>
+      <h1 class="anim d2">Conclusiones y Trabajos Futuros</h1>
+      <p class="title-sub anim d3">Síntesis empírica de resultados y hoja de ruta hacia una arquitectura jerárquica Multi-YOLO.</p>
+      <span class="section-num-bg">05</span>
+    </section>
+
+    <section class="slide" data-group="5" data-color="#0891b2" data-kind="content" data-title="5.1 Conclusiones Empíricas" style="--slide-color:#0891b2">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">05 · Conclusiones</div>
+        <h2>5.1 Conclusiones</h2>
+        <p class="header-summary">Respuesta concluyente a PE1 (escala de datos vs. balanceo) y PE2 (confiabilidad híbrida local).</p>
+      </header>
+      <div class="full-body">
+        <div class="kpi-row anim d2">
+          <div class="kpi"><div class="val">0.854</div><div class="lbl">mAP@50 en Base Test (R-03)</div></div>
+          <div class="kpi"><div class="val">0.994</div><div class="lbl">Word F1 Híbrido Sintético</div></div>
+          <div class="kpi"><div class="val">0.39 s</div><div class="lbl">2 págs Paper Real (403x vs CPU)</div></div>
+        </div>
+        <div class="card-grid-2 anim d3">
+          <div class="card accent-left">
+            <h3>Respuesta a PE1 (Ablación)</h3>
+            <p>El <em>oversampling</em> sobre datos pequeños (<code>R-02</code>) ayuda en clases raras (<em>Footnote</em> 0.027→0.607), pero topa con techo visual. Escalar diversidad real (<code>R-03</code>) logra el salto decisivo (<strong>+19.9 pts</strong> mAP@50 en <em>Base Test</em>) sin <em>overfitting</em>.</p>
+          </div>
+          <div class="card accent-left">
+            <h3>Respuesta a PE2 (Confiabilidad)</h3>
+            <p>Desacoplar <code>YOLOv8m</code> de la lectura por coordenada conserva <strong>100% de orden en 2 columnas</strong>, reduce ~29% los tokens frente a <code>PyMuPDF4LLM</code> y opera 100% en local sin Docker ni APIs de pago.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-group="5" data-color="#0891b2" data-kind="content" data-title="5.2 Trabajos Futuros (Multi-YOLO)" style="--slide-color:#0891b2">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">05 · Conclusiones</div>
+        <h2>5.2 Trabajos Futuros: Arquitectura Jerárquica Multi-YOLO</h2>
+        <p class="header-summary">Evolución Coarse-to-Fine, rescate textual en cajas compuestas y OCR acelerado en GPU.</p>
+      </header>
+      <div class="full-body">
+        <div class="card anim d2">
+          <h3>Propuesta Coarse-to-Fine (2 Etapas Visoespaciales)</h3>
+          <div class="flow-strip" style="grid-template-columns: repeat(3, 1fr); margin-top:12px">
+            <div class="flow-node">
+              <span class="flow-step">Etapa 1 · Macro</span>
+              <h4>YOLO Macro-Zonas</h4>
+              <p>Aísla Banner Editorial, Bloque Título-Autores, Caja Abstract, Columnas de Cuerpo y Pie Legal.</p>
+            </div>
+            <div class="flow-node">
+              <span class="flow-step">Etapa 2 · Micro</span>
+              <h4>YOLO Especializados</h4>
+              <p>Analiza cada columna y caja de forma independiente, garantizando orden y jerarquía exacta.</p>
+            </div>
+            <div class="flow-node">
+              <span class="flow-step">Etapa 3 · Rescate</span>
+              <h4>Heurística + OCR GPU</h4>
+              <p>Distingue <em>Abstract</em> textual vs. tabla numérica, separa subtítulos en cursiva y acelera escaneos en GPU.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card anim d3" style="text-align:center; padding:14px">
+          <p style="font-size:1rem; color:var(--text)"><strong>¡Gracias por su atención!</strong> · Repositorio local operativo en <code>vision-to-md</code> (CLI + App Desktop CustomTkinter).</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BARRA DE NAVEGACIÓN INFERIOR -->
+  <nav class="bottom-nav">
+    <div class="nav-left">
+      <button id="btnPrev" class="nav-btn icon-only" title="Anterior (←)">◀</button>
+      <span id="slideCounter" class="slide-counter">01 / 23</span>
+      <button id="btnNext" class="nav-btn icon-only" title="Siguiente (→ / Espacio)">▶</button>
+      <button id="btnFs" class="nav-btn icon-only" title="Pantalla completa (F)">⛶</button>
+    </div>
+
+    <div id="navDots" class="nav-center" aria-label="Navegación por secciones"></div>
+
+    <div class="nav-right">
+      <a href="sustentacion-codigo/index.html" class="nav-btn" style="text-decoration:none" title="Ir a Sustentación de Código (/sustentacion-codigo)">💻 Código ↗</a>
+      <button id="btnDrawer" class="nav-btn" title="Índice de diapositivas (M)">☰ Índice</button>
+    </div>
+  </nav>
+
+  <!-- PANEL LATERAL DERECHO -->
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+  <aside id="drawer" class="drawer" aria-label="Índice de diapositivas">
+    <div class="drawer-head">
+      <h3>Índice de la Presentación</h3>
+      <button id="btnCloseDrawer" class="nav-btn icon-only" title="Cerrar (Esc)">✕</button>
+    </div>
+    <div id="drawerList" class="drawer-list"></div>
+  </aside>
+
+  <!-- LIGHTBOX DE IMAGEN -->
+  <div id="lightbox" class="lightbox" title="Clic o Esc para cerrar">
+    <img id="lbImg" alt="" />
+    <p id="lbCap"></p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

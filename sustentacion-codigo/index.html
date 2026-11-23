@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sustentación Técnica de Código — Vision-to-MD</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="top-progress"><div id="progressFill" class="top-progress-fill"></div></div>
+
+  <main class="deck">
+
+    <!-- 01 · PORTADA -->
+    <section class="slide slide-title" data-group="0" data-color="#0f172a" data-kind="title" data-title="Portada — Sustentación de Código" style="--slide-color:#0f172a">
+      <div class="title-pill anim d1">Sustentación de Arquitectura y Código</div>
+      <h1 class="anim d2">Vision-to-MD: Recorrido Cronológico por los 18 Módulos Python</h1>
+      <p class="title-sub anim d3">
+        Desde la adquisición limpia de datos hasta el pipeline híbrido en GPU, ablación controlada (R-01 → R-03) y benchmark local.
+      </p>
+      <div class="cover-meta anim d4">
+        <span><strong>Fase 1:</strong> Dataset + R-01</span>
+        <span><strong>Fase 2:</strong> Pipeline src/ + UI</span>
+        <span><strong>Fase 3:</strong> Camino B (R-02)</span>
+        <span><strong>Fase 4:</strong> Camino A (R-03) + Benchmark</span>
+      </div>
+    </section>
+
+    <!-- ==================== FASE 1: DATOS + R-01 ==================== -->
+    <section class="slide slide-title" data-group="1" data-color="#2563eb" data-kind="title" data-title="Fase 1 · Datos Iniciales y R-01" style="--slide-color:#2563eb">
+      <div class="title-pill anim d1">Fase 01</div>
+      <h1 class="anim d2">Dataset Inicial y Baseline R-01</h1>
+      <p class="title-sub anim d3">Descarga reproducible de DocLayNet-small, auditoría sin duplicados y primer entrenamiento YOLOv8s.</p>
+      <span class="section-num-bg">01</span>
+    </section>
+
+    <!-- 1. scripts/01_descargar_dataset.py -->
+    <section class="slide" data-group="1" data-color="#2563eb" data-kind="content" data-title="01_descargar_dataset.py" style="--slide-color:#2563eb">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 01 · Datos Iniciales y Baseline R-01</div>
+        <h2>scripts/01_descargar_dataset.py</h2>
+        <p class="header-summary">Descarga directa del archivo comprimido desde Hugging Face Hub y extracción local reproducible.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Fragmento clave — líneas 19–29">
+              <div class="code-topbar"><strong>01_descargar_dataset.py</strong><span>Líneas 19–29</span></div>
+              <pre class="code-pre">zip_path = hf_hub_download(
+    repo_id="pierreguillou/DocLayNet-small",
+    filename="data/dataset_small.zip",
+    repo_type="dataset",
+    local_dir=str(RAW_DIR),
+)
+
+with zipfile.ZipFile(zip_path, "r") as zf:
+    zf.extractall(EXTRACT_DIR)</pre>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Qué resuelve y decisión técnica</h3>
+            <ul class="bullet-list">
+              <li>Evita fallos de compatibilidad en <code>datasets 5.1.0</code> (que eliminó scripts heredados) descargando directamente el <code>.zip</code> oficial con <code>hf_hub_download</code>.</li>
+              <li>Almacena los archivos crudos en <code>data/_raw/</code> y descomprime de forma ordenada en <code>data/doclaynet_small_raw/</code>.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado de ejecución:</strong> Descargó <code>363.28 MB</code> y extrajo <strong>804 páginas</strong> reales (<code>691</code> train, <code>64</code> valid, <code>49</code> test) con anotaciones JSON y PNG.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. scripts/02_preparar_yolo_y_auditar.py -->
+    <section class="slide" data-group="1" data-color="#2563eb" data-kind="content" data-title="02_preparar_yolo_y_auditar.py" style="--slide-color:#2563eb">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 01 · Datos Iniciales y Baseline R-01</div>
+        <h2>scripts/02_preparar_yolo_y_auditar.py</h2>
+        <p class="header-summary">Deduplicación de bloques por id_box, normalización YOLO, EDA de desbalance y auditoría visual.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Deduplicación id_box y normalización — líneas 69–91">
+              <div class="code-topbar"><strong>02_preparar_yolo_y_auditar.py</strong><span>Líneas 69–91</span></div>
+              <pre class="code-pre">seen_blocks = {}
+for item in data.get("form", []):
+    cat = item.get("category")
+    key = item.get("id_box") or tuple(item["box"])
+    if key not in seen_blocks:
+        seen_blocks[key] = (cat, item["box"])
+
+for cat, (x, y, bw, bh) in seen_blocks.values():
+    xc = max(0.0, min(1.0, (x + bw / 2.0) / w_img))
+    yc = max(0.0, min(1.0, (y + bh / 2.0) / h_img))
+    wn, hn = bw / w_img, bh / h_img
+    yolo_lines.append(f"{CLASS_TO_ID[cat]} {xc:.6f} {yc:.6f} {wn:.6f} {hn:.6f}")</pre>
+            </div>
+            <div class="media-view img-box" data-caption="Resultado visual de auditoría: cajas limpias sin duplicados">
+              <img src="../figuras/fig_audit_01.png" alt="Auditoría" /><span class="zoom-hint">Clic para ampliar</span>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Decisiones de Ingeniería de Datos</h3>
+            <ul class="bullet-list">
+              <li><strong>Deduplicación por <code>id_box</code>:</strong> los JSON repetían la caja padre por cada renglón interno; sin filtrar, YOLO habría entrenado sobre cajas duplicadas.</li>
+              <li><strong>EDA de desbalance:</strong> expuso <code>Text</code> (4,293) vs. <code>Title</code> (59, <strong>73:1</strong>) y <code>Footnote</code> (30, <strong>143:1</strong>).</li>
+              <li><strong>Train / Valid / Test:</strong> separados sin mezcla.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado:</strong> 10,595 cajas únicas en <code>data.yaml</code> + muestras visuales verificadas en <code>docs/samples_audit/</code>.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. scripts/03_entrenar_yolo.py -->
+    <section class="slide" data-group="1" data-color="#2563eb" data-kind="content" data-title="03_entrenar_yolo.py (Run R-01)" style="--slide-color:#2563eb">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 01 · Datos Iniciales y Baseline R-01</div>
+        <h2>scripts/03_entrenar_yolo.py (Run R-01)</h2>
+        <p class="header-summary">Primer Fine-Tuning de YOLOv8s con regularización L2, Early Stopping y Data Augmentation documental.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Entrenamiento base R-01 — líneas 34–66">
+              <div class="code-topbar"><strong>03_entrenar_yolo.py</strong><span>Líneas 34–66</span></div>
+              <pre class="code-pre">model = YOLO("yolov8s.pt")
+model.train(
+    data=str(DATA_YAML),
+    epochs=50, patience=12,       # Early Stopping
+    batch=8, imgsz=1024, device=0, amp=True,
+    optimizer="AdamW", lr0=0.001, cos_lr=True,
+    weight_decay=0.0005,          # Regularización L2
+    fliplr=0.0, flipud=0.0,       # Sin espejo de texto
+    translate=0.05, scale=0.25, mosaic=0.3,
+    plots=True
+)</pre>
+            </div>
+            <div class="media-view img-box" data-caption="Curvas de entrenamiento y validación generadas por R-01">
+              <img src="../figuras/fig_r01_curvas.png" alt="Curvas R-01" /><span class="zoom-hint">Clic para ampliar</span>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Qué aplica de IA</h3>
+            <ul class="bullet-list">
+              <li><strong>Transfer Learning:</strong> parte de pesos COCO en <code>yolov8s.pt</code> (11.1M parámetros) a <code>1024px</code>.</li>
+              <li><strong>Control de Overfitting:</strong> <code>AdamW</code> + L2 (<code>weight_decay=5e-4</code>) + <em>Early Stopping</em> (<code>patience=12</code>) y <em>Augmentation</em> sin volteo horizontal (<code>fliplr=0.0</code>).</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado R-01 (50 épocas, ~19.6 min):</strong> Val <code>mAP@50=0.646</code> | Test <code>mAP@50=0.701</code> (<code>P=0.729, R=0.642</code>). Fuerte en texto/tabla, pero ciego en <code>Footnote</code> (<code>0.027</code>) y débil en <code>Title</code> (<code>0.258</code>).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== FASE 2: PIPELINE SRC + INTERFACES ==================== -->
+    <section class="slide slide-title" data-group="2" data-color="#7c3aed" data-kind="title" data-title="Fase 2 · Pipeline de Producción src/" style="--slide-color:#7c3aed">
+      <div class="title-pill anim d1">Fase 02</div>
+      <h1 class="anim d2">Pipeline Modular e Interfaces</h1>
+      <p class="title-sub anim d3">Flujo real de datos en producción: Adaptador → Visión YOLO → Orden XY-Cut → Lector Híbrido/OCR → Exportador MD → CLI/UI.</p>
+      <span class="section-num-bg">02</span>
+    </section>
+
+    <!-- 4. document_loader.py -->
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="src/adapters/document_loader.py" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 02 · Pipeline src/ (Capa 1: Adapters)</div>
+        <h2>src/adapters/document_loader.py</h2>
+        <p class="header-summary">Convierte PDFs a matrices BGR de 200 DPI e indexa palabras vectoriales por página.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Rasterización PDF e indexación de palabras — líneas 24–36 y 60–72">
+              <div class="code-topbar"><strong>document_loader.py</strong><span>Capa 1 · Adapters</span></div>
+              <pre class="code-pre">if ext == ".pdf":
+    doc = fitz.open(str(path))
+    mat = fitz.Matrix(dpi / 72.0, dpi / 72.0)
+    for idx in range(total):
+        pix = doc.load_page(idx).get_pixmap(matrix=mat, alpha=False)
+        img_rgb = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, 3)
+        paginas.append((idx + 1, cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)))
+
+def cargar_palabras_pdf_por_pagina(source_path, dpi=200):
+    # Extrae (cx_px, cy_px, word) para lectura rápida en modo híbrido
+    ...</pre>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Rol en el sistema</h3>
+            <ul class="bullet-list">
+              <li>Desacopla el formato de entrada: acepta <strong>PDF multipágina</strong>, <strong>imágenes sueltas</strong> (<code>.png, .jpg, .webp</code>) o <strong>carpetas</strong>.</li>
+              <li>Renderiza a <code>200 DPI</code> (~1650×2340 px en A4) para conservar legibilidad en OCR y tablas pequeñas.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado:</strong> Entrega páginas homogéneas BGR a YOLO y, si el PDF es digital, un mapa exacto de coordenadas de texto sin gastar CPU adicional.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. layout_detector.py -->
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="src/vision/layout_detector.py" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 02 · Pipeline src/ (Capa 2: Vision)</div>
+        <h2>src/vision/layout_detector.py</h2>
+        <p class="header-summary">Inferencia YOLOv8 en GPU intercambiable por pesos (.pt) con supresión de cajas contenidas.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Detección agnóstica y filtro de contención — líneas 46–96">
+              <div class="code-topbar"><strong>layout_detector.py</strong><span>Capa 2 · Vision</span></div>
+              <pre class="code-pre">results = self.model.predict(
+    source=img_bgr, conf=conf, iou=0.55,
+    agnostic_nms=True, imgsz=self.imgsz, device=self.device
+)
+
+def _filtrar_contencion(cls, blocks, thr=0.70):
+    ordered = sorted(blocks, key=cls._area, reverse=True)
+    for cand in ordered:
+        for k in kept:
+            if (interseccion(cand, k) / area(cand)) &gt;= thr:
+                contained = True; break</pre>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Por qué es crítico</h3>
+            <ul class="bullet-list">
+              <li><code>agnostic_nms=True</code> elimina duplicados cuando dos clases distintas caen sobre la misma caja (ej. <code>List-item</code> vs <code>Text</code>).</li>
+              <li><code>_filtrar_contencion(0.70)</code> evita que subcajas atrapadas dentro de un <code>Table</code> o lista se exporten dos veces.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado:</strong> Inferencia en <strong>~17–40 ms/pág</strong> en GPU; redujo bloques duplicados de <code>19 → 14</code> en pág. 1 del paper real y de <code>13 → 11</code> en el sintético.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. reading_order.py -->
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="src/layout/reading_order.py" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 02 · Pipeline src/ (Capa 3: Layout)</div>
+        <h2>src/layout/reading_order.py</h2>
+        <p class="header-summary">Filtrado de ruido editorial y algoritmo XY-Cut por bandas para lectura en doble columna.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Separación en bandas horizontales y orden de columnas — líneas 28–59">
+              <div class="code-topbar"><strong>reading_order.py</strong><span>Capa 3 · Layout</span></div>
+              <pre class="code-pre">filtrados = [b for b in blocks if b.label not in {"Page-header", "Page-footer"}]
+ordenados_y = sorted(filtrados, key=lambda b: (b.bbox[1], b.bbox[0]))
+
+for b in ordenados_y:
+    cruza_centro = (b.bbox[0] &lt; mid_x - margin) and (b.bbox[2] &gt; mid_x + margin)
+    if cruza_centro:
+        resultado.extend(_ordenar_zona_columnas(zona_actual, page_width))
+        zona_actual = []
+        resultado.append(b)
+    else:
+        zona_actual.append(b)</pre>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Cómo evita mezclar columnas</h3>
+            <ul class="bullet-list">
+              <li>Descarta <code>Page-header</code> y <code>Page-footer</code> antes de armar el Markdown (ahorro de tokens basura).</li>
+              <li>Detecta bloques anchos que cruzan el centro (títulos, resúmenes) como separadores y ordena cada zona intermedia <strong>izquierda arriba→abajo y luego derecha</strong>.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado:</strong> Alcanzó <strong>1.000 (100%) de exactitud de orden</strong> en doble columna sobre el artículo científico real.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. paddle_reader.py -->
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="src/ocr/paddle_reader.py" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 02 · Pipeline src/ (Capa 4A: OCR Visual)</div>
+        <h2>src/ocr/paddle_reader.py</h2>
+        <p class="header-summary">Wrapper de PaddleOCR 3.7.0 para escaneos e imágenes con solución de compatibilidad oneDNN/PIR.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Desactivación de oneDNN/PIR y clasificadores globales — líneas 17–34">
+              <div class="code-topbar"><strong>paddle_reader.py</strong><span>Capa 4 · PaddleOCR</span></div>
+              <pre class="code-pre">os.environ.setdefault("FLAGS_use_mkldnn", "0")
+os.environ.setdefault("FLAGS_enable_pir_api", "0")
+os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+
+self._ocr = PaddleOCR(
+    use_doc_orientation_classify=False,
+    use_doc_unwarping=False,
+    use_textline_orientation=False,
+    enable_mkldnn=False,
+    lang=self.lang,
+)</pre>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Hallazgo técnico resuelto</h3>
+            <ul class="bullet-list">
+              <li><code>PaddlePaddle 3.3.1</code> lanzaba <code>NotImplementedError</code> en <code>oneDNN/PIR</code> al llamar a <code>predict()</code>; se corrigió desactivando MKLDNN y PIR antes del import.</li>
+              <li>Apaga orientadores de hoja completa porque YOLO ya entrega recortes rectos.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado:</strong> Lectura OCR funcional en español e inglés sobre píxeles (`Word F1 = 0.985` en sintético; ~<code>70s–157s</code> en CPU para 2 págs).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. hybrid_reader.py -->
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="src/ocr/hybrid_reader.py" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 02 · Pipeline src/ (Capa 4B: Lector Híbrido)</div>
+        <h2>src/ocr/hybrid_reader.py</h2>
+        <p class="header-summary">Combina las cajas de YOLO con lectura vectorial rápida en PDFs digitales o fallback a PaddleOCR.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Agrupación por renglón (>14 px) y limpieza de guiones — líneas 73–96">
+              <div class="code-topbar"><strong>hybrid_reader.py</strong><span>Capa 4 · HybridReader</span></div>
+              <pre class="code-pre">seleccionadas = [(cx, cy, w) for (cx, cy, w) in page_words
+                 if x1 - 12 &lt;= cx &lt;= x2 + 12 and y1 - 3 &lt;= cy &lt;= y2 + 3]
+if seleccionadas:
+    seleccionadas.sort(key=lambda item: item[1])
+    for item in seleccionadas:
+        if not lineas or (item[1] - lineas[-1][0][1]) &gt; 14.0:
+            lineas.append([item])
+        else:
+            lineas[-1].append(item)
+    # Orden izq-&gt;der por renglón + _HYPHEN_BREAK_RE (substan- tial -&gt; substantial)</pre>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Cómo funciona el modo híbrido</h3>
+            <ul class="bullet-list">
+              <li><strong>YOLO sigue decidiendo el 100%</strong> de cajas y orden; PyMuPDF solo lee las palabras dentro del rectángulo detectado.</li>
+              <li>Agrupa por renglón visual (salto <code>&gt; 14 px</code>) para no desordenar código en línea ni viñetas CSS, y repara guiones de salto de línea.</li>
+              <li>Si no hay texto interno (escaneo/foto), aplica <em>padding</em> <code>±14 px</code> y cae a <code>PaddleReader</code>.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado:</strong> 0% errores tipográficos de OCR (<code>YOLOv8s</code> exacto) y aceleración de <code>157.25s → 0.39s</code> en paper real.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. markdown_exporter.py -->
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="src/exporters/markdown_exporter.py" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 02 · Pipeline src/ (Capa 5: Exporters)</div>
+        <h2>src/exporters/markdown_exporter.py</h2>
+        <p class="header-summary">Recorta figuras/tablas PNG, infiere niveles ##/###/#### y ensambla el Markdown final.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Recortes visuales y jerarquía de encabezados — líneas 20–26 y 53–89">
+              <div class="code-topbar"><strong>markdown_exporter.py</strong><span>Capa 5 · Exporters</span></div>
+              <pre class="code-pre">def _inferir_nivel_encabezado(texto: str, base: int = 2) -&gt; int:
+    m = _SEC_NUM_RE.match(texto)  # 1. -&gt; ##, 1.1 -&gt; ###, 1.1.1 -&gt; ####
+    if not m: return base
+    return min(6, base + max(0, len([p for p in m.group(1).split(".") if p]) - 1))
+
+if label == "Picture" or (crop_tables_formulas and label in {"Picture", "Table", "Formula"}):
+    cv2.imwrite(str(img_out_dir / fname), img_bgr[y1:y2, x1:x2])
+    md_parts.append(f"![{label} (p.{page_num})](img/{fname})")</pre>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Reglas de ensamblado</h3>
+            <ul class="bullet-list">
+              <li><strong>Bloques visuales:</strong> guarda recortes PNG de alta calidad en <code>img/</code> y los enlaza en su posición exacta de lectura.</li>
+              <li><strong>Semántica Markdown:</strong> <code>Title → #</code>, <code>Footnote → &gt; Nota:</code>, <code>Caption → *cursiva*</code>, y respeta listas numeradas (<code>1. ...</code>) sin duplicar viñetas (<code>- •</code>).</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado:</strong> Convierte el PDF sintético logrando <strong>Word F1 = 0.994</strong> y jerarquía automática <code>## / ###</code> limpia.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. convert_cli.py -->
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="convert_cli.py" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 02 · Interfaces del Sistema</div>
+        <h2>convert_cli.py</h2>
+        <p class="header-summary">Orquestador por línea de comandos para automatización por lotes y generación de diagnósticos.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Orquestación completa y flags CLI — líneas 47–95">
+              <div class="code-topbar"><strong>convert_cli.py</strong><span>Orquestador CLI</span></div>
+              <pre class="code-pre">for page_num, img_bgr in paginas:
+    blocks = detector.detect(img_bgr, conf=conf)
+    ordered = ordenar_bloques_lectura(blocks, page_width=img_bgr.shape[1])
+    if save_debug:
+        vis = LayoutDetector.draw_detections(img_bgr, ordered, numbered=True)
+        cv2.imwrite(str(doc_out_dir / f"debug_pag_{page_num:02d}.png"), vis)
+    page_md, crops = exportar_pagina_markdown(..., page_words=words_by_page.get(page_num))
+
+# Flags: --source, --weights, --lang, --conf 0.30, --max-pages, --save-debug, --reader auto|paddle|pymupdf</pre>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Para qué sirve en el proyecto</h3>
+            <ul class="bullet-list">
+              <li>Une las 5 capas en una sola función reutilizable <code>procesar_documento()</code> (llamada también por los scripts de <em>benchmark</em>).</li>
+              <li>Incluye <code>--save-debug</code> para inspeccionar cajas, etiquetas y orden exacto <code>#1, #2...</code> antes de generar el texto.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado:</strong> Carga por defecto los pesos campeones <code>doclaynet_r03_base_yolov8m.pt</code> y modo lector <code>auto</code>.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11. app_ui.py -->
+    <section class="slide" data-group="2" data-color="#7c3aed" data-kind="content" data-title="app_ui.py + ABRIR_UI.bat" style="--slide-color:#7c3aed">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 02 · Interfaces del Sistema</div>
+        <h2>app_ui.py (+ ABRIR_UI.bat)</h2>
+        <p class="header-summary">Aplicación de escritorio en CustomTkinter con selector de modelos YOLO, visor de cajas y editor .md.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Selector dinámico de modelos y ejecución asíncrona — líneas 52–55 y 178–215">
+              <div class="code-topbar"><strong>app_ui.py</strong><span>Desktop GUI (CustomTkinter)</span></div>
+              <pre class="code-pre">def _get_available_weights(self):
+    pts = sorted([p.name for p in self.weights_dir.glob("*.pt")])
+    return pts
+
+# En _procesar_thread (hilo secundario para no congelar la UI):
+reader_mode = "auto" if self.hybrid_var.get() else "paddle"
+blocks = self.detector.detect(img_bgr, conf=conf)
+ordered = ordenar_bloques_lectura(blocks, page_width=img_bgr.shape[1])
+annotated_list.append(LayoutDetector.draw_detections(img_bgr, ordered, numbered=True))</pre>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Funcionalidades clave para demo en vivo</h3>
+            <ul class="bullet-list">
+              <li><strong>Multi-modelo en vivo:</strong> lista automáticamente los pesos <code>R-01</code>, <code>R-02</code> y <code>R-03</code> de <code>weights/</code> para comparar al vuelo.</li>
+              <li><strong>Control interactivo:</strong> <em>slider</em> de confianza (15%–75%), <em>checkbox</em> de Modo Híbrido rápido, visor central por páginas y panel derecho para copiar el <code>.md</code>.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado:</strong> Se lanza con doble clic en <code>ABRIR_UI.bat</code> dentro del entorno <code>.venv</code> CUDA y procesa documentos en ~0.4–2.0 s.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== FASE 3: CAMINO B (R-02) ==================== -->
+    <section class="slide slide-title" data-group="3" data-color="#059669" data-kind="title" data-title="Fase 3 · Camino B (Run R-02)" style="--slide-color:#059669">
+      <div class="title-pill anim d1">Fase 03</div>
+      <h1 class="anim d2">Mejora Controlada: Camino B (R-02)</h1>
+      <p class="title-sub anim d3">Oversampling estratificado sobre DocLayNet-small, salto arquitectónico a YOLOv8m y comparación contra R-01.</p>
+      <span class="section-num-bg">03</span>
+    </section>
+
+    <!-- 12. 04_preparar_oversampling_r02.py -->
+    <section class="slide" data-group="3" data-color="#059669" data-kind="content" data-title="04_preparar_oversampling_r02.py" style="--slide-color:#059669">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 03 · Camino B (Run R-02)</div>
+        <h2>scripts/04_preparar_oversampling_r02.py</h2>
+        <p class="header-summary">Balanceo estratificado por manifiesto únicamente en Train sin duplicar archivos ni tocar Valid/Test.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Factores de repetición por clase minoritaria — líneas 21–57">
+              <div class="code-topbar"><strong>04_preparar_oversampling_r02.py</strong><span>Balanceo Train-Only</span></div>
+              <pre class="code-pre">CLASS_REPEAT_WEIGHTS = {
+    1: 4,   # Footnote (30 cajas) -&gt; 4x
+    10: 4,  # Title (59 cajas)    -&gt; 4x
+    2: 3,   # Formula (182 cajas) -&gt; 3x
+    6: 2,   # Picture             -&gt; 2x
+    0: 2,   # Caption             -&gt; 2x
+    8: 2,   # Table               -&gt; 2x
+}
+for _ in range(factor):
+    manifest_lines.append(img_path.as_posix())</pre>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Por qué hacerlo por manifiesto</h3>
+            <ul class="bullet-list">
+              <li>Ataca los ratios extremos de <code>R-01</code> (<strong>143:1</strong> en <code>Footnote</code> y <strong>73:1</strong> en <code>Title</code>) escribiendo rutas repetidas en <code>train_r02_balanced.txt</code>.</li>
+              <li><strong>Cero fuga de datos:</strong> <code>valid</code> (64) y <code>test</code> (49) permanecen intactos para evaluar honestamente.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado:</strong> <code>train</code> subió de <code>691</code> a <strong>1,212 entradas/época</strong> (<code>Footnote</code> 30→120, <code>Title</code> 59→236, <code>Formula</code> 182→549).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13. 05_entrenar_r02_yolov8m.py -->
+    <section class="slide" data-group="3" data-color="#059669" data-kind="content" data-title="05_entrenar_r02_yolov8m.py (Run R-02)" style="--slide-color:#059669">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 03 · Camino B (Run R-02)</div>
+        <h2>scripts/05_entrenar_r02_yolov8m.py (Run R-02)</h2>
+        <p class="header-summary">Aumento de capacidad a YOLOv8m con L2 reforzada, close_mosaic=15, Early Stopping y ajuste RAM.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Reanudación segura (workers=0) e hiperparámetros R-02 — líneas 41–85">
+              <div class="code-topbar"><strong>05_entrenar_r02_yolov8m.py</strong><span>Run R-02 (YOLOv8m)</span></div>
+              <pre class="code-pre">model = YOLO("yolov8m.pt")  # 25.8M páram.
+model.train(
+    data=str(DATA_YAML),
+    epochs=75, patience=15,          # Early Stopping
+    batch=4, nbs=32, imgsz=1024,     # ~4.47 GB VRAM
+    workers=0, cache=False, amp=True,# Evita OOM RAM Windows
+    optimizer="AdamW", lr0=0.0008, cos_lr=True,
+    weight_decay=0.0008,             # L2 reforzada
+    fliplr=0.0, close_mosaic=15
+)</pre>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Decisiones e incidente resuelto</h3>
+            <ul class="bullet-list">
+              <li>Tras fallo <code>cv::OutOfMemoryError</code> en época 12 con <code>workers=2</code> (host con 3.3 GB RAM libre), se cambió a <code>workers=0</code> reanudando desde <code>last.pt</code>.</li>
+              <li><strong>Early Stopping funcionó:</strong> detuvo en <strong>época 64</strong> tras 15 épocas sin superar el récord de la <strong>época 49</strong>.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado R-02:</strong> Val <code>mAP@50</code> subió <code>0.646 → 0.711</code> (<code>Footnote</code> explotó <code>0.027 → 0.607</code>); Test <code>mAP@50: 0.701 → 0.722</code>.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14. 06_comparar_r01_r02.py -->
+    <section class="slide" data-group="3" data-color="#059669" data-kind="content" data-title="06_comparar_r01_r02.py" style="--slide-color:#059669">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 03 · Camino B (Run R-02)</div>
+        <h2>scripts/06_comparar_r01_r02.py</h2>
+        <p class="header-summary">Evaluación comparada R-01 vs. R-02 por clase y descubrimiento del límite por falta de diversidad.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Evaluación homogénea y debug visual — líneas 29–49 y 155–170">
+              <div class="code-topbar"><strong>06_comparar_r01_r02.py</strong><span>Ablación R-01 vs R-02</span></div>
+              <pre class="code-pre">def eval_model(weights_path: Path, tag: str):
+    model = YOLO(str(weights_path))
+    for sp in ["val", "test"]:
+        res = model.val(data=str(DATA_YAML), split=sp, imgsz=1024, device=0, workers=0)
+        # Guarda P, R, mAP50, mAP50-95 globales y por cada clase
+
+# Diagnóstico visual sobre prueba_sintetica.pdf y P02_ART-010_Tan_2024.pdf
+generate_visual_debug_r02()</pre>
+            </div>
+            <div class="media-view img-box" data-caption="Comparativa global R-01 vs. R-02 en Valid y Test">
+              <img src="../figuras/fig_r02_comp.png" alt="R-01 vs R-02" /><span class="zoom-hint">Clic para ampliar</span>
+            </div>
+            <div class="media-view img-box" data-caption="Límite detectado en R-02: omite tabla huérfana de 1 fila en pág. 2">
+              <img src="../figuras/fig_sint_r02_p2.png" alt="Debug R-02 p2" /><span class="zoom-hint">Clic para ampliar</span>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Interpretación ingenieril de resultados</h3>
+            <ul class="bullet-list">
+              <li>En el paper real, <code>R-02</code> eliminó falsos encabezados y extrajo el <code>Abstract</code> como texto limpio.</li>
+              <li><strong>Límite encontrado (<em>Domain Shift</em>):</strong> al repetir solo 691 páginas en blanco y negro, perdió sensibilidad ante subtítulos azules UPeU y dejó <code>Title</code> en <code>0.251</code> (val).</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Conclusión del script:</strong> Repetir datos pequeños tiene techo claro; queda demostrada la necesidad del <strong>Camino A (más diversidad real)</strong>.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== FASE 4: CAMINO A (R-03) + BENCHMARK ==================== -->
+    <section class="slide slide-title" data-group="4" data-color="#d97706" data-kind="title" data-title="Fase 4 · Camino A (R-03) y Benchmark" style="--slide-color:#d97706">
+      <div class="title-pill anim d1">Fase 04</div>
+      <h1 class="anim d2">Escalamiento DocLayNet-base (R-03) y Benchmark</h1>
+      <p class="title-sub anim d3">Crecimiento 10x de datos con Zero Data Leakage, modelo campeón YOLOv8m, triple ablación y prueba de confiabilidad.</p>
+      <span class="section-num-bg">04</span>
+    </section>
+
+    <!-- 15. 07_preparar_doclaynet_base.py -->
+    <section class="slide" data-group="4" data-color="#d97706" data-kind="content" data-title="07_preparar_doclaynet_base.py" style="--slide-color:#d97706">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 04 · Camino A (R-03) y Benchmark</div>
+        <h2>scripts/07_preparar_doclaynet_base.py</h2>
+        <p class="header-summary">Descarga de 3.62 GB (8,057 págs), conversión por id_box y filtro anti-fuga contra el benchmark small.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Protección Zero Data Leakage — líneas 145–157">
+              <div class="code-topbar"><strong>07_preparar_doclaynet_base.py</strong><span>Zero Data Leakage</span></div>
+              <pre class="code-pre"># Recopilar stems de valid+test de DocLayNet-small para proteger Train de base
+small_eval_stems = set()
+for sp in ["valid", "test"]:
+    sp_dir = SMALL_YOLO_DIR / sp / "images"
+    small_eval_stems.update(p.stem for p in sp_dir.glob("*.*"))
+
+convertir_split(raw_root, "train", "train", excluir_stems=small_eval_stems)
+convertir_split(raw_root, val_src, "valid", excluir_stems=set())
+convertir_split(raw_root, "test",  "test",  excluir_stems=set())</pre>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Rigor experimental aplicado</h3>
+            <ul class="bullet-list">
+              <li>Verificó los <strong>113 stems</strong> de evaluación de <em>small</em> contra el entrenamiento de <em>base</em> (<code>0</code> coincidencias filtradas), garantizando comparación 100% imparcial.</li>
+              <li>Mantuvo deduplicación por <code>id_box</code>.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado:</strong> <code>6,910</code> train (91,136 cajas) / <code>648</code> valid (incluye 42 <code>Title</code> y 48 <code>Footnote</code>) / <code>499</code> test (6,349 cajas).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 16. 08_entrenar_r03_base_yolov8m.py -->
+    <section class="slide" data-group="4" data-color="#d97706" data-kind="content" data-title="08_entrenar_r03_base_yolov8m.py (R-03)" style="--slide-color:#d97706">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 04 · Camino A (R-03) y Benchmark</div>
+        <h2>scripts/08_entrenar_r03_base_yolov8m.py (Run R-03)</h2>
+        <p class="header-summary">Ablación pura desde COCO (yolov8m.pt) sobre 6,910 páginas + balanceo 3x en Title/Footnote.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Balanceo selectivo y entrenamiento R-03 — líneas 22–26 y 98–130">
+              <div class="code-topbar"><strong>08_entrenar_r03_base_yolov8m.py</strong><span>Modelo Campeón R-03</span></div>
+              <pre class="code-pre">CLASS_REPEAT_WEIGHTS = {1: 3, 10: 3}  # Solo Footnote y Title (3x -&gt; 7,780 entradas)
+
+model = YOLO("yolov8m.pt")  # Limpio desde COCO (no hereda sesgos de R-02)
+model.train(
+    data=str(R03_YAML), epochs=35, patience=8,   # ~243 pasos/época
+    batch=4, nbs=32, imgsz=1024, workers=0, seed=0, amp=True,
+    optimizer="AdamW", lr0=0.0008, cos_lr=True, weight_decay=0.0005,
+    fliplr=0.0, close_mosaic=8
+)</pre>
+            </div>
+            <div class="media-view img-box" data-caption="Curvas limpias de R-03: mejor época 35 tras close_mosaic=8">
+              <img src="../figuras/fig_r03_curvas.png" alt="Curvas R-03" /><span class="zoom-hint">Clic para ampliar</span>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Por qué 35 épocas y desde COCO</h3>
+            <ul class="bullet-list">
+              <li>Con <code>7,780</code> entradas/época realiza <strong>~243 pasos de gradiente por época</strong> (~8,505 pasos reales en 35 ép. = 4.5x más que R-02).</li>
+              <li>Se reanudó desde <code>last.pt</code> en época 12 hasta completar la <strong>época 35</strong> sin <em>overfitting</em> (<code>val/cls_loss=0.547</code>).</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado Campeón R-03:</strong> En <strong>Base Test (499 págs)</strong> alcanzó <code>P=0.824</code>, <code>R=0.804</code>, <strong><code>mAP@50=0.854</code></strong> y <code>mAP@50-95=0.686</code>.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17. 09_comparar_r01_r02_r03.py -->
+    <section class="slide" data-group="4" data-color="#d97706" data-kind="content" data-title="09_comparar_r01_r02_r03.py" style="--slide-color:#d97706">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 04 · Camino A (R-03) y Benchmark</div>
+        <h2>scripts/09_comparar_r01_r02_r03.py</h2>
+        <p class="header-summary">Triple ablación sobre Small Valid, Small Test y Base Test + diagnósticos visuales R-03.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Evaluación cruzada de los 3 pesos — líneas 29–37 y 175–183">
+              <div class="code-topbar"><strong>09_comparar_r01_r02_r03.py</strong><span>Triple Ablación</span></div>
+              <pre class="code-pre">MODELS = {
+    "r01": BASE_DIR / "weights" / "doclaynet_small_yolov8s.pt",
+    "r02": BASE_DIR / "weights" / "doclaynet_r02_yolov8m.pt",
+    "r03": BASE_DIR / "weights" / "doclaynet_r03_base_yolov8m.pt",
+}
+for mk, wpath in MODELS.items():
+    metrics[mk] = {
+        "small_val":  eval_split(wpath, SMALL_YAML, "val"),
+        "small_test": eval_split(wpath, SMALL_YAML, "test"),
+        "base_test":  eval_split(wpath, BASE_YAML,  "test"),
+    }</pre>
+            </div>
+            <div class="media-view img-box" data-caption="Base Test (499 págs): R-03 supera a R-01 y R-02 en las 11 clases">
+              <img src="../figuras/fig_triple_base_clases.png" alt="Triple clases" /><span class="zoom-hint">Clic para ampliar</span>
+            </div>
+            <div class="media-view img-box" data-caption="R-03 rescata la tabla huérfana de 1 fila en página 2 (Table 64%)">
+              <img src="../figuras/fig_sint_r03_p2.png" alt="R-03 p2" /><span class="zoom-hint">Clic para ampliar</span>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Interpretación de la triple ablación</h3>
+            <ul class="bullet-list">
+              <li><code>Base Test</code>: <code>0.655 (R-01) → 0.686 (R-02) → 0.854 (R-03)</code>, subiendo las <strong>11 clases</strong> (<code>Footnote</code> 0.18→0.88, <code>Title</code> 0.59→0.77).</li>
+              <li><code>Small Test</code> (sin fuga): <code>0.701 → 0.722 → 0.822</code>.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Resultado visual:</strong> Rescató subtítulos azules UPeU, tabla de 1 fila en pág. 2 y reclasificó DOI/licencia a <code>Footnote</code> en el paper real.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 18. 10_benchmark_extractores.py -->
+    <section class="slide" data-group="4" data-color="#d97706" data-kind="content" data-title="10_benchmark_extractores.py" style="--slide-color:#d97706">
+      <header class="slide-header anim d1">
+        <div class="kicker-sec">Fase 04 · Camino A (R-03) y Benchmark</div>
+        <h2>scripts/10_benchmark_extractores.py</h2>
+        <p class="header-summary">Comparativa 100% local de confiabilidad, orden 2-columnas y latencia frente a alternativas.</p>
+      </header>
+      <div class="split-body">
+        <div class="media-panel anim d2">
+          <div class="view-stage">
+            <div class="media-view code-box" data-caption="Métricas Word F1 y exactitud de orden por pares — líneas 45–95">
+              <div class="code-topbar"><strong>10_benchmark_extractores.py</strong><span>Benchmark Local</span></div>
+              <pre class="code-pre">def word_f1(pred_md: str, ref_md: str):
+    common = sum((Counter(words(pred_md)) &amp; Counter(words(ref_md))).values())
+    # Calcula Word Precision, Recall, F1 y tokens estimados (~chars/4)
+
+def eval_orden_y_calidad_paper(md_text: str):
+    # Verifica 13 frases ancla ordenadas (pág 1 y pág 2) -&gt; order_acc (pares válidos)
+    # Cuenta guiones rotos (substan- tial) y fugas de encabezados repetitivos</pre>
+            </div>
+            <div class="media-view img-box" data-caption="Documento sintético: Vision-to-MD Híbrido logra F1 = 0.994 en 2.00 s">
+              <img src="../figuras/fig_bench_sint.png" alt="Bench sintético" /><span class="zoom-hint">Clic para ampliar</span>
+            </div>
+            <div class="media-view img-box" data-caption="Paper real 2 columnas: 12/13 anclas, orden 1.000 y 0 guiones rotos en 0.39 s">
+              <img src="../figuras/fig_bench_paper.png" alt="Bench paper" /><span class="zoom-hint">Clic para ampliar</span>
+            </div>
+          </div>
+          <div class="media-bar"><span class="media-caption"></span><div class="media-controls"><button class="img-btn img-prev">◀</button><span class="img-counter"></span><button class="img-btn img-next">▶</button></div></div>
+        </div>
+        <div class="text-panel anim d3">
+          <div class="card accent-left">
+            <h3>Qué demostró frente a alternativas</h3>
+            <ul class="bullet-list">
+              <li><strong>Frente a <code>PyMuPDF crudo</code>:</strong> elimina los <code>18</code> guiones rotos y ruido de márgenes.</li>
+              <li><strong>Frente a <code>PyMuPDF4LLM</code>:</strong> conserva diagramas (<code>PyMuPDF4LLM</code> borró el Mermaid), ahorra <strong>29% tokens</strong> y sube de <code>0.866</code> a <strong><code>0.994</code></strong> Word F1.</li>
+              <li><strong>Frente a <code>Marker</code>:</strong> corre nativo sin Docker Desktop en <strong>0.39 s</strong>.</li>
+            </ul>
+          </div>
+          <div class="result-pill"><strong>Cierre técnico:</strong> Demo lista ejecutando <code>ABRIR_UI.bat</code> con el modelo <code>R-03</code> y Modo Híbrido activado.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BARRA DE NAVEGACIÓN INFERIOR -->
+  <nav class="bottom-nav">
+    <div class="nav-left">
+      <button id="btnPrev" class="nav-btn icon-only" title="Anterior (←)">◀</button>
+      <span id="slideCounter" class="slide-counter">01 / 23</span>
+      <button id="btnNext" class="nav-btn icon-only" title="Siguiente (→ / Espacio)">▶</button>
+      <button id="btnFs" class="nav-btn icon-only" title="Pantalla completa (F)">⛶</button>
+    </div>
+
+    <div id="navDots" class="nav-center" aria-label="Navegación por fases"></div>
+
+    <div class="nav-right">
+      <a href="../index.html" class="nav-btn" title="Volver a la Presentación del Artículo">📊 Artículo ↗</a>
+      <button id="btnDrawer" class="nav-btn" title="Índice de archivos (M)">☰ Índice</button>
+    </div>
+  </nav>
+
+  <!-- DRAWER LATERAL DERECHO -->
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+  <aside id="drawer" class="drawer" aria-label="Índice de código">
+    <div class="drawer-head">
+      <h3>Índice Cronológico (18 Archivos)</h3>
+      <button id="btnCloseDrawer" class="nav-btn icon-only" title="Cerrar (Esc)">✕</button>
+    </div>
+    <div id="drawerList" class="drawer-list"></div>
+  </aside>
+
+  <!-- LIGHTBOX DE IMAGEN -->
+  <div id="lightbox" class="lightbox" title="Clic o Esc para cerrar">
+    <img id="lbImg" alt="" />
+    <p id="lbCap"></p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
